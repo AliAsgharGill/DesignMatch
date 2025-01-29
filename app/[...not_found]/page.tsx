@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound } from 'next/navigation'
 
 const NotFoundPage: React.FC = () => {
-  notFound();
-};
+  notFound()
+}
 
-export default NotFoundPage;
+export default NotFoundPage

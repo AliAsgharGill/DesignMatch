@@ -10,9 +10,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #fe5901;
-    --primary-light: #ff7a29;
-    --primary-dark: #d44e00;
+    --primary: #320dbb;
+    --primary-light: #5433cc;
+    --primary-dark: #1c0080;
     --secondary: #f6f6f6;
     --text-dark: #2d2d2d;
     --shadow-primary: rgba(249, 115, 22, 0.2);

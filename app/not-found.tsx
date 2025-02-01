@@ -3,12 +3,12 @@ import Link from 'next/link'
 const NotFound = () => {
   return (
     <div className="flex items-center justify-center min-h-[90vh] px-6">
-      <div className="text-center max-w-md">
-        <h1 className="text-5xl font-extrabold text-gray-800 mb-6">
+      <div className="text-center max-w-full">
+        <h1 className="text-5xl font-extrabold text-gray-800 mb-6 w-full  laptop:w-auto mx-auto">
           404 - Page Not Found
         </h1>
-        <p className="text-lg text-gray-600 mb-8">
-          Sorry, the page you are looking for doesn&apos;t exist. You may have
+        <p className="text-lg text-gray-600 mb-8 w-1/2 mx-auto ">
+          Ohhh! The page you are looking for doesn&apos;t exist. You may have
           mistyped the address or the page may have moved.
         </p>
         <Link

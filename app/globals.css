@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* --background: #ffffff; */
+  /* --foreground: #171717; */
+  --main-font: var(--font-poppins); /* Reference the variable from layout.js */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #320dbb;
+    --primary-light: #5433cc;
+    --primary-dark: #1c0080;
+    --secondary: #f6f6f6;
+    --text-dark: #2d2d2d;
+    --shadow-primary: rgba(249, 115, 22, 0.2);
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--main-font), sans-serif;
+}
+
+:root {
+  font-family: var(--font-poppins), sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-poppins), sans-serif;
+}

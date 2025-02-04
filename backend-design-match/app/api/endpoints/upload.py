@@ -40,7 +40,7 @@ async def process_upload(
         extension = Path(file.filename).suffix
         file_name = f"{upload_type}_{original_name}_{timestamp}{extension}"
 
-        file_path = save_upload_file(file, Path("temp") / file_name)
+        file_path = await save_upload_file(file, Path("temp") / file_name)
         return {"file_path": str(file_path)}
 
     except Exception as e:

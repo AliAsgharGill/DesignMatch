@@ -7,7 +7,21 @@ temp_dir = Path("temp")
 temp_dir.mkdir(parents=True, exist_ok=True)
 
 
-def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
-    with destination.open("wb") as buffer:
-        shutil.copyfileobj(upload_file.file, buffer)
-    return str(destination)
+async def save_upload_file(file: UploadFile, destination: Path) -> Path:
+    """
+    Save an uploaded file to the specified destination.
+
+    Args:
+        file: The uploaded file
+        destination: Path where the file should be saved
+
+    Returns:
+        Path to the saved file
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    content = await file.read()
+    with open(destination, "wb") as f:
+        f.write(content)
+
+    return destination

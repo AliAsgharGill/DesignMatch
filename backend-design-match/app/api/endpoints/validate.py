@@ -148,6 +148,27 @@ async def validate_layout(figma_path: str, ui_path: str):
     with open(html_file_path, "w", encoding="utf-8") as html_file:
         html_file.write(result_html)
 
+    # JSON response with validation results
+    response_data = {
+        "design_match_score": design_score,
+        "text_match_score": text_similarity,
+        "overall_match_score": overall_match_score,
+        "issues": issues,
+        "html_report_url": "/validate/layout/download",
+    }
+
+    return response_data
+
+
+@router.get("/validate/layout/download")
+async def download_report():
+    """Download the generated UI validation report."""
+    temp_dir = tempfile.gettempdir()
+    html_file_path = os.path.join(temp_dir, "ui_validation_report.html")
+
+    if not os.path.exists(html_file_path):
+        raise HTTPException(status_code=404, detail="Report not found")
+
     return FileResponse(
         html_file_path, media_type="text/html", filename="ui_validation_report.html"
     )

@@ -1,4 +1,6 @@
 import os
+import webbrowser
+from threading import Timer
 
 from api.endpoints.auth import router as auth_router
 from api.endpoints.generate_report import router as generate_report_router
@@ -10,8 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="Design Match API", version="1.0")
 
 # Enable CORS for frontend interaction
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Update this to restrict access in production
@@ -34,3 +34,21 @@ async def root():
 # Run the app using: uvicorn app.main:app --reload
 
 os.environ["PATH"] += os.pathsep + r"C:\Path\To\GTK\bin"
+
+if __name__ == "__main__":
+    import uvicorn
+
+    def open_browser():
+        # Open the docs page in a new browser window
+        webbrowser.open_new("http://127.0.0.1:8000/docs")
+
+    # Start a timer to open the browser after 1 second delay
+    Timer(1, open_browser).start()
+
+    try:
+        import weasyprint
+    except ImportError:
+        weasyprint = None
+        # Optionally: log a warning or handle the case where weasyprint is not available.
+
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

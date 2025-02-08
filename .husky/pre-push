@@ -1,0 +1,11 @@
+#!/bin/sh
+echo "Running pre-push hook"
+
+# Build the app
+echo "🚀✨ Building the app before push... 🔨📦"
+if ! yarn build; then
+  echo "❌🚫 Build failed. 🔍 Please fix the errors before pushing. 🛠️"
+  exit 1
+fi
+
+echo "✅🎉 Build succeeded! 🚀 Moving forward with the push... 📤✨"

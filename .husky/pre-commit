@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Run lint-staged to lint only staged files
+echo " 🚀 Running lint-staged"
+yarn lint-staged

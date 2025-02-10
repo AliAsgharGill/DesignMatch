@@ -1,0 +1,8 @@
+{
+    "Codegeex.RepoIndex": true,
+    "cSpell.words": ["techwize"],
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  }
+  

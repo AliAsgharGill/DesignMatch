@@ -6,6 +6,8 @@ from api.endpoints.upload import router as upload_router
 from api.endpoints.validate import router as validate_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from api.endpoints import api_router
+
 
 app = FastAPI(title="Design Match API", version="1.0")
 
@@ -24,6 +26,8 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(upload_router, prefix="/upload", tags=["upload"])
 app.include_router(validate_router, prefix="/validate", tags=["validate"])
 app.include_router(generate_report_router, prefix="/api/v1", tags=["reports"])
+app.include_router(api_router, prefix="/deep_validate", tags=["deep_validate"])
+
 
 
 @app.get("/")

@@ -1,5 +1,0 @@
-#!/bin/sh
-
-yarn lint --fix
-yarn prettier --write "app/**/*.{js,ts,tsx,json,css,md}" "src/**/*.{js,ts,tsx,json,css,md}"
-yarn lint-staged  

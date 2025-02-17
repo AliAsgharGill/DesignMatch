@@ -1,9 +1,11 @@
 import os
 from fastapi import FastAPI
 from api.endpoints.auth import router as auth_router
-from api.   endpoints.upload import router as upload_router
+from api.endpoints.upload import router as upload_router
 from api.endpoints.validate import router as validate_router
 from api.endpoints.deep_validate import router as deep_validate_router  
+from api.endpoints.detect_elements import router as detect_elements_router
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Design Match API", version="1.0")
@@ -20,9 +22,10 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(detect_elements_router, prefix="/detect/elements", tags=["detect elements"])   
 app.include_router(upload_router, prefix="/upload", tags=["upload"])
 app.include_router(validate_router, prefix="/validate", tags=["validate"])
-app.include_router(deep_validate_router, prefix="/validate/deep", tags=["Deep Validation"])
+app.include_router(deep_validate_router, prefix="/validate/deep", tags=["deep Validation"])
 
 
 

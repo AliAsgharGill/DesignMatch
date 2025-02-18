@@ -19,7 +19,7 @@ class DeepModel:
         if model_path:
             model = torch.load(model_path, map_location=self.device)
         else:
-            model = models.resnet50(pretrained=True)
+            model = models.resnet50(weights=True)
             model = nn.Sequential(*list(model.children())[:-1])  # Remove last FC layer
 
         return model

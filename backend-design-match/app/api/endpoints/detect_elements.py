@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pytesseract
 import json
-import random
+import os
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import Response
 
@@ -17,6 +17,14 @@ COLOR_MAPPING = {
     'unknown': (200, 200, 200)    # Gray
 }
 
+CLASS_MAPPING = {
+    'text': 0,
+    'button': 1,
+    'image': 2,
+    'input_field': 3,
+    'decorative': 4,
+    'unknown': 5
+}
 
 def preprocess_image(gray_image):
     blurred = cv2.GaussianBlur(gray_image, (5, 5), 0)
@@ -26,11 +34,9 @@ def preprocess_image(gray_image):
     processed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
     return processed
 
-
 def detect_elements(processed_image):
     contours, _ = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
-
 
 def classify_ui_element(w, h, text):
     if text.strip():
@@ -41,16 +47,15 @@ def classify_ui_element(w, h, text):
         return 'image'
     elif 50 < w < 150 and 10 < h < 50:
         return 'input_field'
-    elif w < 30 and h < 30:  # Small elements, could be icons
+    elif w < 30 and h < 30:
         return 'decorative'
     return 'unknown'
-
 
 def extract_annotations(contours, gray_image):
     annotations = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        if w < 10 or h < 10:  # Ignore tiny elements
+        if w < 10 or h < 10:
             continue
 
         roi = gray_image[y:y + h, x:x + w]
@@ -62,13 +67,10 @@ def extract_annotations(contours, gray_image):
 
     return annotations
 
-
 def is_overlapping(box1, ann):
     x1, y1, w1, h1 = box1
     x2, y2, w2, h2 = ann['x'], ann['y'], ann['w'], ann['h']
-
     return not (x1 + w1 < x2 or x2 + w2 < x1 or y1 + h1 < y2 or y2 + h2 < y1)
-
 
 def draw_bounding_boxes(image, annotations):
     for ann in annotations:
@@ -76,6 +78,23 @@ def draw_bounding_boxes(image, annotations):
         color = COLOR_MAPPING.get(element_type, (200, 200, 200))
         cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 
+def save_annotations(annotations, image_name, image_width, image_height):
+    yolo_path = f"{image_name}.txt"
+    json_path = f"{image_name}.json"
+
+    # Save YOLO format
+    with open(yolo_path, 'w') as f:
+        for ann in annotations:
+            x_center = (ann['x'] + ann['w'] / 2) / image_width
+            y_center = (ann['y'] + ann['h'] / 2) / image_height
+            width = ann['w'] / image_width
+            height = ann['h'] / image_height
+            class_id = CLASS_MAPPING.get(ann['type'], CLASS_MAPPING['unknown'])
+            f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+
+    # Save JSON format
+    with open(json_path, 'w') as f:
+        json.dump(annotations, f, indent=4)
 
 @router.post("/detect-elements/")
 async def detect_ui_elements(file: UploadFile = File(...)):
@@ -87,6 +106,10 @@ async def detect_ui_elements(file: UploadFile = File(...)):
     processed = preprocess_image(gray)
     contours = detect_elements(processed)
     annotations = extract_annotations(contours, gray)
+
+    image_height, image_width, _ = image.shape
+    save_annotations(annotations, file.filename.split('.')[0], image_width, image_height)
+
     draw_bounding_boxes(image, annotations)
 
     _, encoded_img = cv2.imencode(".png", image)

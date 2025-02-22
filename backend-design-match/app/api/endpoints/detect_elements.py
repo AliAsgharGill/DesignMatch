@@ -64,7 +64,6 @@ def extract_annotations(contours, gray_image):
 
         if not any(is_overlapping((x, y, w, h), ann) for ann in annotations):
             annotations.append({'x': x, 'y': y, 'w': w, 'h': h, 'type': element_type, 'text': text})
-
     return annotations
 
 def is_overlapping(box1, ann):
@@ -79,22 +78,24 @@ def draw_bounding_boxes(image, annotations):
         cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 
 def save_annotations(annotations, image_name, image_width, image_height):
-    yolo_path = f"{image_name}.txt"
     json_path = f"{image_name}.json"
+    coco_format = {
+        "image": {
+            "file_name": f"{image_name}.png",
+            "width": image_width,
+            "height": image_height
+        },
+        "annotations": []
+    }
 
-    # Save YOLO format
-    with open(yolo_path, 'w') as f:
-        for ann in annotations:
-            x_center = (ann['x'] + ann['w'] / 2) / image_width
-            y_center = (ann['y'] + ann['h'] / 2) / image_height
-            width = ann['w'] / image_width
-            height = ann['h'] / image_height
-            class_id = CLASS_MAPPING.get(ann['type'], CLASS_MAPPING['unknown'])
-            f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+    for ann in annotations:
+        coco_format["annotations"].append({
+            "x": ann['x'], "y": ann['y'], "w": ann['w'], "h": ann['h'],
+            "type": ann['type'], "text": ann['text']
+        })
 
-    # Save JSON format
     with open(json_path, 'w') as f:
-        json.dump(annotations, f, indent=4)
+        json.dump(coco_format, f, indent=4)
 
 @router.post("/detect-elements/")
 async def detect_ui_elements(file: UploadFile = File(...)):

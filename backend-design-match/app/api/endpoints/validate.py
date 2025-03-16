@@ -11,7 +11,7 @@ from fuzzywuzzy import fuzz
 from skimage.metrics import structural_similarity as ssim
 
 # pytesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = r"/usr/local/bin/tesseract"
 
 
 router = APIRouter()

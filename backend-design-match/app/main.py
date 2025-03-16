@@ -1,7 +1,8 @@
 import os
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from auth.routes import auth_router
-from api.   endpoints.upload import router as upload_router
+from api.endpoints.upload import router as upload_router
 from api.endpoints.validate import router as validate_router
 from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import register_tortoise
@@ -11,8 +12,6 @@ from tortoise.contrib.fastapi import register_tortoise
 app = FastAPI(title="Design Match API", version="1.0")
 
 # Enable CORS for frontend interaction
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Update this to restrict access in production
@@ -36,9 +35,10 @@ register_tortoise(
 )
 
 
-@app.get("/")
+# Redirect root ("/") to Swagger UI docs ("/docs")
+@app.get("/", include_in_schema=False)
 async def root():
-    return {"message": "Welcome to Design Match API"}
+    return RedirectResponse(url="/docs")
 
 
 # Run the app using: uvicorn app.main:app --reload

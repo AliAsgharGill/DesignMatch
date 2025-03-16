@@ -1,13 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordRequestForm
-from auth.models import User, UserCreate
-from auth.utils import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from datetime import timedelta
-from .models import UserLogin 
 
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
+from auth.models import User, UserCreate
+from auth.utils import (create_access_token, create_refresh_token,
+                        decode_token, hash_password, verify_password)
+
+from .models import UserLogin
 
 auth_router = APIRouter()
+
 
 @auth_router.post("/register")
 async def register(user_data: UserCreate):
@@ -22,7 +25,7 @@ async def register(user_data: UserCreate):
             - role (UserRole, optional): User's role (default: "user").
 
     Returns:
-        dict: 
+        dict:
             - message (str): Success message.
             - user_id (int): The unique ID of the newly created user.
     """
@@ -32,10 +35,14 @@ async def register(user_data: UserCreate):
 
     hashed_password = hash_password(user_data.password)
     user = await User.create(
-        email=user_data.email, username=user_data.username, hashed_password=hashed_password, role=user_data.role
+        email=user_data.email,
+        username=user_data.username,
+        hashed_password=hashed_password,
+        role=user_data.role,
     )
-    
+
     return {"message": "User registered successfully", "user_id": user.id}
+
 
 @auth_router.post("/login")
 async def login(user_data: UserLogin):
@@ -48,7 +55,7 @@ async def login(user_data: UserLogin):
             - password (str): User's password.
 
     Returns:
-        dict: 
+        dict:
             - access_token (str): JWT access token.
             - refresh_token (str): JWT refresh token.
             - token_type (str): "bearer".
@@ -64,7 +71,12 @@ async def login(user_data: UserLogin):
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
 
 @auth_router.post("/refresh")
 async def refresh_token(refresh_token: str):
@@ -75,7 +87,7 @@ async def refresh_token(refresh_token: str):
         refresh_token (str): The refresh token provided during login.
 
     Returns:
-        dict: 
+        dict:
             - access_token (str): New JWT access token.
             - token_type (str): Token type (always "bearer").
 

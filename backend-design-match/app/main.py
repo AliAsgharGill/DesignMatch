@@ -1,13 +1,13 @@
 import os
+
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
-from auth.routes import auth_router
-from api.endpoints.upload import router as upload_router
-from api.endpoints.validate import router as validate_router
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from tortoise.contrib.fastapi import register_tortoise
 
-
+from api.endpoints.upload import router as upload_router
+from api.endpoints.validate import router as validate_router
+from auth.routes import auth_router
 
 app = FastAPI(title="Design Match API", version="1.0")
 
@@ -44,3 +44,7 @@ async def root():
 # Run the app using: uvicorn app.main:app --reload
 
 os.environ["PATH"] += os.pathsep + r"C:\Path\To\GTK\bin"
+import pytesseract
+
+# Set the Tesseract command path
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"

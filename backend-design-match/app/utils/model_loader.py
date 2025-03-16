@@ -1,6 +1,7 @@
 import torch
 import torchvision.models as models
 
+
 def load_deep_model():
     """Load a pre-trained deep learning model for UI comparison."""
     model = models.resnet18(weights=True)

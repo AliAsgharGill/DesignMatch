@@ -5,11 +5,11 @@ import tempfile
 import cv2
 import numpy as np
 import pytesseract
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from auth.dependencies import get_current_user
 from fastapi.responses import FileResponse
 from fuzzywuzzy import fuzz
 from skimage.metrics import structural_similarity as ssim
-
 # pytesseract path
 pytesseract.pytesseract.tesseract_cmd = r"/usr/local/bin/tesseract"
 
@@ -51,7 +51,7 @@ def detect_text_areas(image):
     return text_regions
 
 
-@router.post("/validate/layout")
+@router.post("/validate/layout", dependencies=[Depends(get_current_user)])
 async def validate_layout(figma_path: str, ui_path: str):
     figma_image = cv2.imread(figma_path)
     ui_image = cv2.imread(ui_path)
@@ -160,9 +160,9 @@ async def validate_layout(figma_path: str, ui_path: str):
     return response_data
 
 
-@router.get("/validate/layout/download")
+@router.get("/validate/layout/download", dependencies=[Depends(get_current_user)])
 async def download_report():
-    """Download the generated UI validation report."""
+    """Download the generated UI validation report. Requires authentication."""
     temp_dir = tempfile.gettempdir()
     html_file_path = os.path.join(temp_dir, "ui_validation_report.html")
 

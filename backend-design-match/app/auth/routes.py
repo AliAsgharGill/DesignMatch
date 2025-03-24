@@ -44,14 +44,17 @@ async def register(user_data: UserCreate):
     return {"message": "User registered successfully", "user_id": user.id}
 
 
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+
 @auth_router.post("/login")
-async def login(user_data: UserLogin):
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authenticate a user and return access and refresh tokens.
 
     Args:
-        user_data (UserLogin): User login credentials containing:
-            - email (str): User's email.
+        form_data (OAuth2PasswordRequestForm): Form data containing:
+            - username (str): User's email (used as username).
             - password (str): User's password.
 
     Returns:
@@ -61,11 +64,11 @@ async def login(user_data: UserLogin):
             - token_type (str): "bearer".
     """
     try:
-        user = await User.get(email=user_data.email)
+        user = await User.get(email=form_data.username)  # OAuth2PasswordRequestForm uses 'username' instead of 'email'
     except DoesNotExist:
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
-    if not verify_password(user_data.password, user.hashed_password):
+    if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid password")
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
@@ -76,6 +79,7 @@ async def login(user_data: UserLogin):
         "refresh_token": refresh_token,
         "token_type": "bearer",
     }
+
 
 
 @auth_router.post("/refresh")

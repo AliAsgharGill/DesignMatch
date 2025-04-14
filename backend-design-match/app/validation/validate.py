@@ -1,19 +1,24 @@
-import os
-import cv2
 import base64
+import os
 import tempfile
+
+import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import FileResponse
-from skimage.metrics import structural_similarity as ssim
-from fuzzywuzzy import fuzz
-from ultralytics import YOLO
 from auth.dependencies import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
+from fuzzywuzzy import fuzz
+from skimage.metrics import structural_similarity as ssim
+from ultralytics import YOLO
 
 # Define YOLO model path
-model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "model", "best_60k.pt"))
+model_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "model", "best_60k.pt")
+)
 if not os.path.exists(model_path):
-    raise FileNotFoundError(f"\u274c Model file not found at: {os.path.abspath(model_path)}")
+    raise FileNotFoundError(
+        f"\u274c Model file not found at: {os.path.abspath(model_path)}"
+    )
 
 print(f"\u2705 Loading YOLO model from: {os.path.abspath(model_path)}")
 model = YOLO(model_path)
@@ -21,9 +26,11 @@ print("🎯 Model loaded successfully!")
 
 # Set Tesseract path
 import pytesseract
+
 pytesseract.pytesseract.tesseract_cmd = r"/usr/local/bin/tesseract"
 
 router = APIRouter()
+
 
 def detect_ui_elements(image):
     results = model(image)
@@ -31,36 +38,46 @@ def detect_ui_elements(image):
     for r in results:
         for box in r.boxes.data:
             x1, y1, x2, y2, conf, cls = box.tolist()
-            elements.append({
-                "label": r.names[int(cls)],
-                "bbox": [int(x1), int(y1), int(x2), int(y2)],
-                "confidence": round(conf * 100, 2),
-            })
+            elements.append(
+                {
+                    "label": r.names[int(cls)],
+                    "bbox": [int(x1), int(y1), int(x2), int(y2)],
+                    "confidence": round(conf * 100, 2),
+                }
+            )
     return elements
+
 
 def compare_elements(figma_elements, ui_elements):
     issues = []
-    figma_labels = {el['label'] for el in figma_elements}
-    ui_labels = {el['label'] for el in ui_elements}
+    figma_labels = {el["label"] for el in figma_elements}
+    ui_labels = {el["label"] for el in ui_elements}
 
     missing_elements = figma_labels - ui_labels
     extra_elements = ui_labels - figma_labels
 
     for el in missing_elements:
-        issues.append({"type": "Missing Element", "description": f"{el} is missing in the UI"})
+        issues.append(
+            {"type": "Missing Element", "description": f"{el} is missing in the UI"}
+        )
     for el in extra_elements:
-        issues.append({"type": "Extra Element", "description": f"{el} is extra in the UI"})
-    
+        issues.append(
+            {"type": "Extra Element", "description": f"{el} is extra in the UI"}
+        )
+
     return issues
+
 
 def extract_text(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     text = pytesseract.image_to_string(gray)
     return text.strip()
 
+
 def compare_text(figma_text, ui_text):
     similarity = fuzz.ratio(figma_text, ui_text)
     return similarity
+
 
 def compute_ssim(figma_image, ui_image):
     if figma_image.shape != ui_image.shape:
@@ -69,6 +86,7 @@ def compute_ssim(figma_image, ui_image):
     ui_gray = cv2.cvtColor(ui_image, cv2.COLOR_BGR2GRAY)
     score, _ = ssim(figma_gray, ui_gray, full=True)
     return score
+
 
 def detect_text_areas(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -81,28 +99,30 @@ def detect_text_areas(image):
             text_regions.append((x, y, w, h))
     return text_regions
 
+
 def split_long_image(image, max_height):
     height = image.shape[0]
-    
+
     # If the image height is smaller than the max_height, just return the full image
     if height <= max_height:
         return [image]
-    
+
     slices = []
     for y in range(0, height, max_height):
-        slice_img = image[y:y + max_height, :]
+        slice_img = image[y : y + max_height, :]
         slices.append(slice_img)
-    
+
     return slices
+
 
 @router.post("/validate/layout", dependencies=[Depends(get_current_user)])
 async def validate_layout(figma_path: str, ui_path: str):
     figma_image = cv2.imread(figma_path)
     ui_image = cv2.imread(ui_path)
-    
+
     if figma_image is None or ui_image is None:
         raise HTTPException(status_code=400, detail="Invalid image paths")
-    
+
     # Dynamically determine max_height based on the uploaded image's height
     image_height = ui_image.shape[0]
     max_height = 1024  # Default threshold for slicing
@@ -131,30 +151,45 @@ async def validate_layout(figma_path: str, ui_path: str):
     threshold = 20
 
     for fx, fy, fw, fh in figma_text_areas:
-        matching = any(abs(fx - ux) < threshold and abs(fy - uy) < threshold for ux, uy, uw, uh in combined_ui_text_areas)
+        matching = any(
+            abs(fx - ux) < threshold and abs(fy - uy) < threshold
+            for ux, uy, uw, uh in combined_ui_text_areas
+        )
         if not matching:
-            cv2.rectangle(highlighted_ui_image, (fx, fy), (fx + fw, fy + fh), (0, 0, 255), 2)
-            text_alignment_issues.append({
-                "type": "Text Alignment",
-                "description": f"Text region at ({fx}, {fy}, {fw}, {fh}) is misaligned or missing."
-            })
+            cv2.rectangle(
+                highlighted_ui_image, (fx, fy), (fx + fw, fy + fh), (0, 0, 255), 2
+            )
+            text_alignment_issues.append(
+                {
+                    "type": "Text Alignment",
+                    "description": f"Text region at ({fx}, {fy}, {fw}, {fh}) is misaligned or missing.",
+                }
+            )
 
     for ux, uy, uw, uh in combined_ui_text_areas:
-        cv2.rectangle(highlighted_ui_image, (ux, uy), (ux + uw, uy + uh), (0, 255, 0), 2)
+        cv2.rectangle(
+            highlighted_ui_image, (ux, uy), (ux + uw, uy + uh), (0, 255, 0), 2
+        )
 
-    overall_match_score = round((layout_similarity * 100 * 0.6) + (text_similarity * 0.4), 2)
+    overall_match_score = round(
+        (layout_similarity * 100 * 0.6) + (text_similarity * 0.4), 2
+    )
 
     issues = element_issues.copy()
     if text_similarity < 90:
-        issues.append({
-            "type": "Text Similarity",
-            "description": f"Text similarity is {text_similarity}%, which is below the acceptable threshold."
-        })
+        issues.append(
+            {
+                "type": "Text Similarity",
+                "description": f"Text similarity is {text_similarity}%, which is below the acceptable threshold.",
+            }
+        )
     issues.extend(text_alignment_issues)
-    issues.append({
-        "type": "Layout Similarity",
-        "description": f"Layout similarity score (SSIM): {layout_similarity:.2f}"
-    })
+    issues.append(
+        {
+            "type": "Layout Similarity",
+            "description": f"Layout similarity score (SSIM): {layout_similarity:.2f}",
+        }
+    )
 
     _, buffer = cv2.imencode(".png", highlighted_ui_image)
     img_base64 = base64.b64encode(buffer).decode("utf-8")
@@ -195,7 +230,12 @@ async def validate_layout(figma_path: str, ui_path: str):
     with open(html_file_path, "w", encoding="utf-8") as html_file:
         html_file.write(result_html)
 
-    return {"issues": issues, "overall_match_score": overall_match_score, "html_report_url": "/validate/layout/download"}
+    return {
+        "issues": issues,
+        "overall_match_score": overall_match_score,
+        "html_report_url": "/validate/layout/download",
+    }
+
 
 @router.get("/validate/layout/download", dependencies=[Depends(get_current_user)])
 async def download_report():
@@ -205,4 +245,6 @@ async def download_report():
     if not os.path.exists(html_file_path):
         raise HTTPException(status_code=404, detail="Report not found")
 
-    return FileResponse(html_file_path, media_type="text/html", filename="ui_validation_report.html")
+    return FileResponse(
+        html_file_path, media_type="text/html", filename="ui_validation_report.html"
+    )

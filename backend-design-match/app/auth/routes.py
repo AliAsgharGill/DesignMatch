@@ -1,11 +1,10 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
-
 from auth.models import User, UserCreate
 from auth.utils import (create_access_token, create_refresh_token,
                         decode_token, hash_password, verify_password)
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
 from .models import UserLogin
 
@@ -47,6 +46,7 @@ async def register(user_data: UserCreate):
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
+
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
@@ -64,7 +64,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             - token_type (str): "bearer".
     """
     try:
-        user = await User.get(email=form_data.username)  # OAuth2PasswordRequestForm uses 'username' instead of 'email'
+        user = await User.get(
+            email=form_data.username
+        )  # OAuth2PasswordRequestForm uses 'username' instead of 'email'
     except DoesNotExist:
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
@@ -79,7 +81,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "refresh_token": refresh_token,
         "token_type": "bearer",
     }
-
 
 
 @auth_router.post("/refresh")

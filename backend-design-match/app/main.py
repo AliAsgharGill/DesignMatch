@@ -1,13 +1,12 @@
 import os
 
+from auth.routes import auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from tortoise.contrib.fastapi import register_tortoise
-
 from validation.upload import router as upload_router
 from validation.validate import router as validate_router
-from auth.routes import auth_router
 
 app = FastAPI(title="DesignMatch API", version="1.0")
 

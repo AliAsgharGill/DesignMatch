@@ -1,15 +1,16 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-
 from auth.models import UserRole
 from auth.utils import decode_token
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     if not token:
-        raise HTTPException(status_code=401, detail="Token is missing")  # Ensure token is required
+        raise HTTPException(
+            status_code=401, detail="Token is missing"
+        )  # Ensure token is required
 
     try:
         payload = decode_token(token)
@@ -20,6 +21,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         return {"email": email, "role": role}
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 
 async def admin_required(user: dict = Depends(get_current_user)):
     if user["role"] != UserRole.ADMIN:

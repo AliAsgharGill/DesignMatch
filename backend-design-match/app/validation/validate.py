@@ -1,9 +1,8 @@
 import os
 import cv2
-import tempfile
 import base64
+import tempfile
 import numpy as np
-import pytesseract
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from skimage.metrics import structural_similarity as ssim
@@ -13,21 +12,20 @@ from auth.dependencies import get_current_user
 
 # Define YOLO model path
 model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "model", "best_60k.pt"))
-
 if not os.path.exists(model_path):
-    raise FileNotFoundError(f"❌ Model file not found at: {os.path.abspath(model_path)}")
+    raise FileNotFoundError(f"\u274c Model file not found at: {os.path.abspath(model_path)}")
 
-print(f"✅ Loading YOLO model from: {os.path.abspath(model_path)}")
+print(f"\u2705 Loading YOLO model from: {os.path.abspath(model_path)}")
 model = YOLO(model_path)
 print("🎯 Model loaded successfully!")
 
 # Set Tesseract path
+import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"/usr/local/bin/tesseract"
 
 router = APIRouter()
 
 def detect_ui_elements(image):
-    """Detect UI elements using YOLOv8 model."""
     results = model(image)
     elements = []
     for r in results:
@@ -41,7 +39,6 @@ def detect_ui_elements(image):
     return elements
 
 def compare_elements(figma_elements, ui_elements):
-    """Compare detected UI elements between Figma and implemented UI."""
     issues = []
     figma_labels = {el['label'] for el in figma_elements}
     ui_labels = {el['label'] for el in ui_elements}
@@ -57,19 +54,15 @@ def compare_elements(figma_elements, ui_elements):
     return issues
 
 def extract_text(image):
-    """Extract text from an image using Tesseract OCR with grayscale preprocessing."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     text = pytesseract.image_to_string(gray)
     return text.strip()
 
 def compare_text(figma_text, ui_text):
-    """Compare extracted text from Figma and UI images using fuzzy logic."""
     similarity = fuzz.ratio(figma_text, ui_text)
     return similarity
 
 def compute_ssim(figma_image, ui_image):
-    """Compute Structural Similarity Index (SSIM) for layout comparison."""
-    # Resize figma_image to match the dimensions of ui_image if necessary
     if figma_image.shape != ui_image.shape:
         figma_image = cv2.resize(figma_image, (ui_image.shape[1], ui_image.shape[0]))
     figma_gray = cv2.cvtColor(figma_image, cv2.COLOR_BGR2GRAY)
@@ -77,73 +70,80 @@ def compute_ssim(figma_image, ui_image):
     score, _ = ssim(figma_gray, ui_gray, full=True)
     return score
 
-
 def detect_text_areas(image):
-    """Detect text areas and return bounding boxes."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # Invert binary thresholding to detect white text on dark background if needed
     _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     text_regions = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        if h > 10:  # Filter out very small regions
+        if h > 10:
             text_regions.append((x, y, w, h))
     return text_regions
 
+def split_long_image(image, max_height):
+    height = image.shape[0]
+    
+    # If the image height is smaller than the max_height, just return the full image
+    if height <= max_height:
+        return [image]
+    
+    slices = []
+    for y in range(0, height, max_height):
+        slice_img = image[y:y + max_height, :]
+        slices.append(slice_img)
+    
+    return slices
+
 @router.post("/validate/layout", dependencies=[Depends(get_current_user)])
 async def validate_layout(figma_path: str, ui_path: str):
-    # Read images
     figma_image = cv2.imread(figma_path)
     ui_image = cv2.imread(ui_path)
     
     if figma_image is None or ui_image is None:
         raise HTTPException(status_code=400, detail="Invalid image paths")
+    
+    # Dynamically determine max_height based on the uploaded image's height
+    image_height = ui_image.shape[0]
+    max_height = 1024  # Default threshold for slicing
+    if image_height < max_height:
+        max_height = image_height  # Use the image height itself if it's smaller
 
-    # UI Element Detection using YOLOv8
+    # Handle long images
+    ui_slices = split_long_image(ui_image, max_height)
+    combined_ui_elements, combined_ui_text, combined_ui_text_areas = [], "", []
+    highlighted_ui_image = ui_image.copy()
+
+    for ui_slice in ui_slices:
+        combined_ui_elements.extend(detect_ui_elements(ui_slice))
+        combined_ui_text += " " + extract_text(ui_slice)
+        combined_ui_text_areas.extend(detect_text_areas(ui_slice))
+
     figma_elements = detect_ui_elements(figma_image)
-    ui_elements = detect_ui_elements(ui_image)
-    element_issues = compare_elements(figma_elements, ui_elements)
+    element_issues = compare_elements(figma_elements, combined_ui_elements)
 
-    # Text Extraction & Comparison
     figma_text = extract_text(figma_image)
-    ui_text = extract_text(ui_image)
-    text_similarity = compare_text(figma_text, ui_text)
+    text_similarity = compare_text(figma_text, combined_ui_text)
 
-    # Layout similarity using SSIM
     layout_similarity = compute_ssim(figma_image, ui_image)
-
-    # Detect text areas for alignment validation
     figma_text_areas = detect_text_areas(figma_image)
-    ui_text_areas = detect_text_areas(ui_image)
-
-    # Visual Issue Highlighting: Copy Figma image to draw highlights
-    highlighted_image = figma_image.copy()
     text_alignment_issues = []
-    threshold = 20  # pixels tolerance for alignment
+    threshold = 20
 
-    # For each text area in the Figma image, look for a matching region in the UI image
-    for i, (fx, fy, fw, fh) in enumerate(figma_text_areas):
-        matching = any(
-            abs(fx - ux) < threshold and abs(fy - uy) < threshold
-            for (ux, uy, uw, uh) in ui_text_areas
-        )
+    for fx, fy, fw, fh in figma_text_areas:
+        matching = any(abs(fx - ux) < threshold and abs(fy - uy) < threshold for ux, uy, uw, uh in combined_ui_text_areas)
         if not matching:
-            # Mark missing/misaligned text in red
-            cv2.rectangle(highlighted_image, (fx, fy), (fx + fw, fy + fh), (0, 0, 255), 2)
+            cv2.rectangle(highlighted_ui_image, (fx, fy), (fx + fw, fy + fh), (0, 0, 255), 2)
             text_alignment_issues.append({
                 "type": "Text Alignment",
                 "description": f"Text region at ({fx}, {fy}, {fw}, {fh}) is misaligned or missing."
             })
 
-    # Draw green boxes for text areas detected in the UI image for reference
-    for (ux, uy, uw, uh) in ui_text_areas:
-        cv2.rectangle(highlighted_image, (ux, uy), (ux + uw, uy + uh), (0, 255, 0), 2)
+    for ux, uy, uw, uh in combined_ui_text_areas:
+        cv2.rectangle(highlighted_ui_image, (ux, uy), (ux + uw, uy + uh), (0, 255, 0), 2)
 
-    # Compute an overall match score (weighted average: layout 60% and text 40%)
     overall_match_score = round((layout_similarity * 100 * 0.6) + (text_similarity * 0.4), 2)
 
-    # Combine all issues
     issues = element_issues.copy()
     if text_similarity < 90:
         issues.append({
@@ -156,11 +156,9 @@ async def validate_layout(figma_path: str, ui_path: str):
         "description": f"Layout similarity score (SSIM): {layout_similarity:.2f}"
     })
 
-    # Encode highlighted image as base64 to embed in HTML report
-    _, buffer = cv2.imencode(".png", highlighted_image)
+    _, buffer = cv2.imencode(".png", highlighted_ui_image)
     img_base64 = base64.b64encode(buffer).decode("utf-8")
 
-    # Generate detailed HTML report
     result_html = f"""
     <html>
         <head>
@@ -192,7 +190,6 @@ async def validate_layout(figma_path: str, ui_path: str):
     </html>
     """
 
-    # Write HTML report to a temporary file
     temp_dir = tempfile.gettempdir()
     html_file_path = os.path.join(temp_dir, "ui_validation_report.html")
     with open(html_file_path, "w", encoding="utf-8") as html_file:
@@ -202,11 +199,10 @@ async def validate_layout(figma_path: str, ui_path: str):
 
 @router.get("/validate/layout/download", dependencies=[Depends(get_current_user)])
 async def download_report():
-    """Download the generated UI validation report."""
     temp_dir = tempfile.gettempdir()
     html_file_path = os.path.join(temp_dir, "ui_validation_report.html")
-    
+
     if not os.path.exists(html_file_path):
         raise HTTPException(status_code=404, detail="Report not found")
-    
+
     return FileResponse(html_file_path, media_type="text/html", filename="ui_validation_report.html")

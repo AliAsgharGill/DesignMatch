@@ -1,15 +1,25 @@
 import base64
+import logging
 import os
 import tempfile
 
 import cv2
 import numpy as np
 from auth.dependencies import get_current_user
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from fuzzywuzzy import fuzz
+from google.cloud import vision
 from skimage.metrics import structural_similarity as ssim
 from ultralytics import YOLO
+from utils.vision_fallback import google_ocr_extract as extract_text_with_google_vision
+
+
+load_dotenv()
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+
 
 # Define YOLO model path
 model_path = os.path.abspath(
@@ -68,10 +78,51 @@ def compare_elements(figma_elements, ui_elements):
     return issues
 
 
+def extract_text_with_google_vision(image):
+    """Use Google Cloud Vision API to extract text from an image."""
+    try:
+        client = vision.ImageAnnotatorClient()
+        success, encoded_image = cv2.imencode(".png", image)
+
+        if not success:
+            raise ValueError("Failed to encode image for Google Vision.")
+
+        content = encoded_image.tobytes()
+        image = vision.Image(content=content)
+
+        response = client.text_detection(image=image)
+        annotations = response.text_annotations
+
+        if response.error.message:
+            raise RuntimeError(response.error.message)
+
+        if annotations:
+            return annotations[0].description.strip()
+
+        return ""
+
+    except Exception as e:
+        print(f"❌ Google Vision OCR error: {e}")
+        return ""
+
+
 def extract_text(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text.strip()
+    """Extract text using Tesseract with fallback to Google Vision API."""
+    try:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        text = pytesseract.image_to_string(gray).strip()
+
+        if text:  # If Tesseract succeeds
+            return text
+
+        print(
+            "⚠️ Tesseract OCR failed or returned empty. Falling back to Google Vision API..."
+        )
+        return extract_text_with_google_vision(image)
+
+    except Exception as e:
+        print(f"❌ Tesseract OCR error: {e}")
+        return extract_text_with_google_vision(image)
 
 
 def compare_text(figma_text, ui_text):

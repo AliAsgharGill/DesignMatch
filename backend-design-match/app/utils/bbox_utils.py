@@ -1,4 +1,3 @@
-# app/utils/bbox_utils.py
 def compute_iou(boxA, boxB):
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])

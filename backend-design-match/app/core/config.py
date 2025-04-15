@@ -6,5 +6,5 @@ router = APIRouter()
 
 @router.post("/login")
 async def login():
-    print("SECRET_KEY:", SECRET_KEY)  # Just for testing (remove in production)
+    # print("SECRET_KEY:", SECRET_KEY)  # Just for testing (remove in production)
     return {"message": "Login successful"}

@@ -13,12 +13,13 @@ from fuzzywuzzy import fuzz
 from google.cloud import vision
 from skimage.metrics import structural_similarity as ssim
 from ultralytics import YOLO
-from utils.vision_fallback import google_ocr_extract as extract_text_with_google_vision
-
+from utils.vision_fallback import \
+    google_ocr_extract as extract_text_with_google_vision
 
 load_dotenv()
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv(
+    "GOOGLE_APPLICATION_CREDENTIALS"
+)
 
 
 # Define YOLO model path

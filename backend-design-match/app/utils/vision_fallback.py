@@ -1,7 +1,8 @@
 # utils/vision_fallback.py
 
-from google.cloud import vision
 import cv2
+from google.cloud import vision
+
 
 def google_ocr_extract(image):
     """Use Google Cloud Vision API to extract text from an image."""

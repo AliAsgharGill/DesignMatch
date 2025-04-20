@@ -1,13 +1,8 @@
 from datetime import timedelta
 
 from auth.models import User, UserCreate
-from auth.utils import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    hash_password,
-    verify_password,
-)
+from auth.utils import (create_access_token, create_refresh_token,
+                        decode_token, hash_password, verify_password)
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 

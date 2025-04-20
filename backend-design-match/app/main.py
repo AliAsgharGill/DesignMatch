@@ -4,11 +4,15 @@ from auth.routes import auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from mangum import Mangum
 from tortoise.contrib.fastapi import register_tortoise
 from validation.upload import router as upload_router
 from validation.validate import router as validate_router
 
+
+
 app = FastAPI(title="DesignMatch API", version="1.0")
+handler = Mangum(app)  # AWS Lambda handler
 
 # Enable CORS for frontend interaction
 app.add_middleware(
